@@ -1,0 +1,54 @@
+# Laura
+IP/Port and Packet Sniffer in one!
+
+from scapy.all import sniff, IP, TCP
+from colorama import init, Fore
+import pyfiglet
+
+# Initialize colorama
+init(autoreset=True)
+
+def print_banner():
+    banner = pyfiglet.figlet_format("LAURA")
+    print(Fore.MAGENTA + banner)
+
+def packet_callback(packet, target_ip, target_port):
+    if packet.haslayer(IP) and packet.haslayer(TCP):
+        ip_layer = packet[IP]
+        tcp_layer = packet[TCP]
+
+        if (ip_layer.dst == target_ip or ip_layer.src == target_ip) and \
+           (tcp_layer.dport == target_port or tcp_layer.sport == target_port):
+            print(Fore.GREEN + f"[+] Packet: {ip_layer.src}:{tcp_layer.sport} -> {ip_layer.dst}:{tcp_layer.dport}")
+            payload = bytes(tcp_layer.payload)
+            if payload:
+                print(Fore.WHITE + f"    Payload: {payload}\n")
+
+def main():
+    print_banner()
+    print(Fore.CYAN + "[*] Real-Time Packet Sniffer\n")
+
+    # Get IP and port to monitor
+    target_ip = input(Fore.WHITE + "Enter target IP address: ").strip()
+
+    try:
+        target_port = int(input(Fore.WHITE + "Enter target port to sniff: "))
+    except ValueError:
+        print(Fore.RED + "[!] Invalid port number.")
+        return
+
+    print(Fore.YELLOW + f"\n[+] Sniffing TCP traffic for {target_ip}:{target_port}...\n")
+
+    try:
+        sniff(
+            filter=f"tcp and host {target_ip} and port {target_port}",
+            prn=lambda pkt: packet_callback(pkt, target_ip, target_port),
+            store=False
+        )
+    except PermissionError:
+        print(Fore.RED + "[!] You need to run this script as root or administrator to sniff packets.")
+
+if __name__ == "__main__":
+    main()
+
+
